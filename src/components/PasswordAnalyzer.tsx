@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { analyzePassword, PasswordAnalysis } from "../utils/password";
+import { computeAllHashes, HashEntry } from "../utils/hashing";
+import { HashComparisonPanel } from "./HashComparisonPanel";
 
 interface Props {
   onChange: (a: PasswordAnalysis) => void;
@@ -17,9 +19,14 @@ const STRENGTH_COLORS: Record<string, string> = {
 export function PasswordAnalyzer({ onChange }: Props) {
   const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
+  const [hashExpanded, setHashExpanded] = useState(false);
+  const [hashEntries, setHashEntries] = useState<HashEntry[]>([]);
+  const [hashLoading, setHashLoading] = useState(false);
+
   const analysis = analyzePassword(pw);
   const color = STRENGTH_COLORS[analysis.strength];
 
+  // Notify parent of analysis changes
   const lastSent = useRef("");
   useEffect(() => {
     const sig = `${analysis.entropy}|${analysis.strength}`;
@@ -28,6 +35,51 @@ export function PasswordAnalyzer({ onChange }: Props) {
       onChange(analysis);
     }
   }, [analysis, onChange]);
+
+  // Debounced hash computation when expanded and password changes
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const computeHashes = useCallback(async (password: string, entropy: number) => {
+    if (!password) {
+      setHashEntries([]);
+      setHashLoading(false);
+      return;
+    }
+    setHashLoading(true);
+    try {
+      const entries = await computeAllHashes(password, entropy);
+      setHashEntries(entries);
+    } catch {
+      setHashEntries([]);
+    } finally {
+      setHashLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hashExpanded) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!pw) {
+      setHashEntries([]);
+      return;
+    }
+
+    setHashLoading(true);
+    debounceRef.current = setTimeout(() => {
+      computeHashes(pw, analysis.entropy);
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [pw, hashExpanded, analysis.entropy, computeHashes]);
+
+  // When expanding for the first time with a password already typed, trigger computation
+  useEffect(() => {
+    if (hashExpanded && pw && hashEntries.length === 0 && !hashLoading) {
+      computeHashes(pw, analysis.entropy);
+    }
+  }, [hashExpanded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checks = [
     { label: "a-z", ok: analysis.hasLower },
@@ -78,12 +130,6 @@ export function PasswordAnalyzer({ onChange }: Props) {
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
         <div className="flex items-center justify-between">
-          <span className="text-slate-500">Estimated crack time</span>
-          <span className="font-mono font-semibold" style={{ color }}>
-            {analysis.crackTime}
-          </span>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
           <span className="text-slate-500">Charset size</span>
           <span className="font-mono text-slate-800">{analysis.charsetSize}</span>
         </div>
@@ -117,6 +163,39 @@ export function PasswordAnalyzer({ onChange }: Props) {
           </ul>
         </div>
       )}
+
+      {/* Hash Analysis Toggle */}
+      {pw.length > 0 && (
+        <button
+          onClick={() => setHashExpanded(e => !e)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#00d9ff] hover:bg-[#00d9ff]/5 hover:text-[#0099b8]"
+        >
+          <span>{hashExpanded ? "Hide" : "Show"} Hash Analysis</span>
+          <span
+            className="text-[10px] transition-transform duration-200"
+            style={{ transform: hashExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          >
+            ▼
+          </span>
+        </button>
+      )}
+
+      {/* Hash Comparison Panel */}
+      {hashExpanded && pw.length > 0 && (
+        <div
+          className="overflow-hidden transition-all duration-300"
+          style={{ animation: "fadeSlideIn 0.3s ease" }}
+        >
+          <HashComparisonPanel entries={hashEntries} loading={hashLoading} />
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

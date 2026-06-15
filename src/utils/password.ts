@@ -4,7 +4,6 @@ export interface PasswordAnalysis {
   entropy: number;
   rawEntropy: number;
   strength: Strength;
-  crackTime: string;
   charsetSize: number;
   length: number;
   penalties: string[];
@@ -81,23 +80,17 @@ export function analyzePassword(password: string): PasswordAnalysis {
   }
 
   let strength: Strength;
-  let crackTime: string;
 
   if (length === 0) {
     strength = "Empty";
-    crackTime = "—";
   } else if (entropy < 40) {
     strength = "Weak";
-    crackTime = "Instant";
   } else if (entropy < 60) {
     strength = "Moderate";
-    crackTime = "Minutes to Hours";
   } else if (entropy < 80) {
     strength = "Strong";
-    crackTime = "Years";
   } else {
     strength = "Very Strong";
-    crackTime = "Practically Unbreakable";
   }
 
   // Cap visual score at 100 (entropy 100+)
@@ -107,7 +100,6 @@ export function analyzePassword(password: string): PasswordAnalysis {
     entropy,
     rawEntropy,
     strength,
-    crackTime,
     charsetSize,
     length,
     penalties,
