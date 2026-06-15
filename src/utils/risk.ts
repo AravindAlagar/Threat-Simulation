@@ -3,12 +3,12 @@ export type RiskLevel = "Low" | "Medium" | "High" | "Critical";
 export interface RiskAssessment {
   passwordRisk: number;   // 0-100
   ddosRisk: number;       // 0-100
-  infectionRisk: number;  // 0-100
+  phishingRisk: number;   // 0-100
   score: number;          // weighted 0-100
   level: RiskLevel;
   passwordActive: boolean;
   ddosActive: boolean;
-  infectionActive: boolean;
+  phishingActive: boolean;
 }
 
 export interface RiskInputs {
@@ -24,8 +24,8 @@ export interface RiskInputs {
   activeRequests: number;
   /** Average response time in ms from the real server. */
   avgLatencyMs: number;
-  /** Infection percentage (0-100). */
-  infectionPercent: number;
+  /** Phishing score (0-100) from the client-side URL analyser. */
+  phishingScore: number;
 }
 
 /* ─── Per-module risk mappings ─────────────────────────────────────────── */
@@ -61,15 +61,19 @@ export function ddosRiskFromRealMetrics(
   return Math.min(100, Math.max(0, risk));
 }
 
-export function infectionRiskFromPercent(pct: number): number {
-  const p = Math.max(0, Math.min(100, pct));
-  if (p === 0) return 0;
-  return Math.round(Math.sqrt(p / 100) * 100);
+/**
+ * Maps the 0–100 phishing score directly to a 0–100 risk contribution.
+ * Uses a sqrt curve so even moderate scores register noticeable risk.
+ */
+export function phishingRiskFromScore(score: number): number {
+  const s = Math.max(0, Math.min(100, score));
+  if (s === 0) return 0;
+  return Math.round(Math.sqrt(s / 100) * 100);
 }
 
 /* ─── Aggregate risk ──────────────────────────────────────────────────── */
 
-const WEIGHTS = { password: 0.3, ddos: 0.4, infection: 0.3 };
+const WEIGHTS = { password: 0.3, ddos: 0.4, phishing: 0.3 };
 
 export function computeRisk(inputs: RiskInputs): RiskAssessment {
   const passwordRisk = inputs.passwordProvided
@@ -80,15 +84,15 @@ export function computeRisk(inputs: RiskInputs): RiskAssessment {
     ? ddosRiskFromRealMetrics(inputs.serverStatus, inputs.activeRequests, inputs.avgLatencyMs)
     : 0;
 
-  const infectionActive = inputs.infectionPercent > 0;
-  const infectionRisk = infectionActive
-    ? infectionRiskFromPercent(inputs.infectionPercent)
+  const phishingActive = inputs.phishingScore > 0;
+  const phishingRisk = phishingActive
+    ? phishingRiskFromScore(inputs.phishingScore)
     : 0;
 
   const active: Array<[number, number]> = [];
   if (inputs.passwordProvided) active.push([passwordRisk, WEIGHTS.password]);
   if (inputs.ddosActive)       active.push([ddosRisk,     WEIGHTS.ddos]);
-  if (infectionActive)         active.push([infectionRisk, WEIGHTS.infection]);
+  if (phishingActive)          active.push([phishingRisk,  WEIGHTS.phishing]);
 
   let score = 0;
   if (active.length > 0) {
@@ -105,11 +109,11 @@ export function computeRisk(inputs: RiskInputs): RiskAssessment {
   return {
     passwordRisk,
     ddosRisk,
-    infectionRisk,
+    phishingRisk,
     score,
     level,
     passwordActive: inputs.passwordProvided,
     ddosActive: inputs.ddosActive,
-    infectionActive,
+    phishingActive,
   };
 }

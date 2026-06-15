@@ -145,6 +145,20 @@ export function TrashIcon({ size = 14, className, strokeWidth = 2 }: IconProps) 
   );
 }
 
+export function PhishingIcon({ size = 18, className, strokeWidth = 2 }: IconProps) {
+  return (
+    <svg {...base(size, className)} strokeWidth={strokeWidth}>
+      {/* Fishing hook shape */}
+      <path d="M12 3v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-1" />
+      <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M3 12l1.5-1.5L6 12" />
+      {/* Line from hook */}
+      <path d="M12 3l8-1" />
+      <path d="M20 2l1 3" />
+    </svg>
+  );
+}
+
 export const Icons = {
   Shield: ShieldIcon,
   Target: TargetIcon,
@@ -155,6 +169,7 @@ export const Icons = {
   Virus: VirusIcon,
   Firewall: FirewallIcon,
   Power: PowerIcon,
+  Phishing: PhishingIcon,
 };
 
 // Helper to render any icon by name in a children prop

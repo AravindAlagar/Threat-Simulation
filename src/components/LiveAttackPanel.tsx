@@ -157,9 +157,6 @@ export function LiveAttackPanel({ onMetrics }: Props) {
           </div>
         )}
 
-        <code className="ml-auto rounded border border-slate-200 bg-slate-100 px-2 py-1 text-[11px] text-slate-500 font-mono">
-          localhost:3001
-        </code>
       </div>
 
       {metrics ? (
@@ -232,30 +229,7 @@ export function LiveAttackPanel({ onMetrics }: Props) {
         </div>
       )}
 
-      {/* Attack instructions */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-          How to Attack
-        </div>
-        <div className="space-y-1.5 text-xs text-slate-600">
-          <div className="flex items-start gap-2">
-            <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 font-mono text-[10px]">1</span>
-            <span>Start the server: <code className="text-[#0099b8]">npm run server</code></span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 font-mono text-[10px]">2</span>
-            <span>Run the Python script: <code className="text-[#0099b8]">python3 dos_attack.py --target http://localhost:3001/api/flood --rate 100</code></span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 font-mono text-[10px]">3</span>
-            <span>Watch the metrics above update in real time as the server degrades</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 font-mono text-[10px]">4</span>
-            <span>Press <kbd className="rounded border border-slate-300 bg-white px-1 text-[10px]">Ctrl+C</kbd> in the Python terminal to stop</span>
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 }
